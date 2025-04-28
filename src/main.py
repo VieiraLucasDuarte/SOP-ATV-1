@@ -23,6 +23,7 @@ def create_cpu_history(cpus):
 
 def run_scheduler(tasks, cpus, cpu_history):
     completed_tasks = []
+    CYCLE_DURATION = 5  # Cada ciclo é de 5 segundos
 
     while len(completed_tasks) < len(tasks):
         available_cpus = cpus[:]
@@ -38,9 +39,24 @@ def run_scheduler(tasks, cpus, cpu_history):
                 execution_queue.append((task, allocated_cpus))
 
         for task, allocated_cpus in execution_queue:
-            task["remainingDuration"] -= task["quantum"]
-            for cpu in allocated_cpus:
-                cpu_history[cpu.name].append(f"{task['id']}({task['quantum']})")
+            # Calcular quantos ciclos de 5 segundos esta tarefa irá ocupar
+            cycles_needed = task["quantum"] // CYCLE_DURATION
+            if task["quantum"] % CYCLE_DURATION > 0:
+                cycles_needed += 1
+            
+            # Executar por no máximo o tempo restante
+            execution_time = min(task["quantum"], task["remainingDuration"])
+            task["remainingDuration"] -= execution_time
+            
+            # Adicionar entradas para cada ciclo de 5 segundos
+            for i in range(cycles_needed):
+                cycle_time = min(CYCLE_DURATION, execution_time - (i * CYCLE_DURATION))
+                if cycle_time <= 0:
+                    break
+                    
+                for cpu in allocated_cpus:
+                    cpu_history[cpu.name].append(f"{task['id']}({cycle_time})")
+            
             if task["remainingDuration"] <= 0:
                 completed_tasks.append(task["id"])
 
